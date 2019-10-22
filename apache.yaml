@@ -1,0 +1,37 @@
+---
+
+- hosts: acer
+  become: yes #gibt root rechte
+  tasks:
+   - name: install apache2
+     apt: name=apache2 update_cache=yes state=latest  #update_cahe führt ein apt-get update vor installation durch  state=latest ladet die letzte Version
+     when: ansible_pkg_mgr =="apt" #alternativ wäre auch eine abfrage mit Ansible_os_family möglich
+
+   - name: install httpd auf RHEL,CentOS oder Fedora
+     yum: name=httpd state=latest #update _cache nicht nötig da der yum Packetmanager automatisch nach der neuesten Version sucht
+     when: ansible_pkg_mgr =="yum"
+  
+
+   - name: apache2 listen on port 8081
+     lineinfile: dest=/etc/apache2/ports.conf regexp="^Listen 80" line="Listen 8081" state=present
+     notify:
+        - restart apache2
+
+   - name: apache2 virtualhost on port 8081
+     lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="^<VirtualHost \*:80>" line="<VirtualHost *:8081>" state=present
+     notify:
+        - restart apache2
+
+   - name: apache2 virtualhostname
+     lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="localhost" line="Servername testname" state=present
+     notify:
+        - restart apache2
+
+
+  handlers: #wird ausgeführt falls es eine Veränderung gab
+    - name: restart apache2
+      service: name=apache2 state=restarted #Restart bei Veränderungen ist notwendig, damit diese wirksam werden
+
+  
+
+  
